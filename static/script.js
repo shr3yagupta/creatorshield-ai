@@ -6,29 +6,27 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
   analyzeBtn.onclick = ()=>{
 
-      const text = input.value.trim();
+    const text = input.value.trim();
 
-      if(text === ""){
-          alert("Please paste a message first");
-          return;
-      }
+    if(text === ""){
+        alert("Please paste a message first");
+        return;
+    }
 
-      fetch("/analyze",{
-          method:"POST",
-          headers:{
-              "Content-Type":"application/json"
-          },
-          body:JSON.stringify({text:text})
-      })
-      .then(res=>res.json())
-      .then(data=>{
-          resultBox.innerHTML =
-          `<h3>Risk: ${data.risk}</h3>
-           <p>${data.message}</p>`;
-      })
-      .catch(()=>{
-          resultBox.innerHTML = "Error analyzing message";
-      });
+    fetch("/analyze",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify({text:text})
+    })
+    .then(res=>res.json())
+    .then(data=>{
+        resultBox.innerHTML = `<pre>${data.ai}</pre>`;
+    })
+    .catch(()=>{
+        resultBox.innerHTML = "Error analyzing message";
+    });
 
   }
 
