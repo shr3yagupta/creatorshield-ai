@@ -1,41 +1,46 @@
-const analyzeBtn = document.getElementById("analyzeBtn");
+const btn = document.getElementById("analyzeBtn");
 const result = document.getElementById("result");
 
-// ========== TEXT ANALYSIS ==========
-analyzeBtn.onclick = () => {
-    result.textContent = "Analyzing...";
-
+btn.onclick = () => {
     fetch("/analyze",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-            text: messageInput.value
+            text:document.getElementById("messageInput").value
         })
     })
     .then(r=>r.json())
     .then(d=>{
-        result.textContent = JSON.stringify(d,null,2);
+        result.innerText = JSON.stringify(d,null,2);
     });
 };
 
+// Screenshot
+document.getElementById("imageBtn").onclick = ()=>{
+    let file = document.getElementById("imageInput").files[0];
+    let f = new FormData();
+    f.append("image",file);
 
-// ========== IMAGE ANALYSIS ==========
-const imageBtn = document.getElementById("analyzeImageBtn");
-const imgResult = document.getElementById("imgResult");
-
-imageBtn.onclick = () => {
-
-    imgResult.textContent = "Analyzing Screenshot...";
-
-    let form = new FormData();
-    form.append("image", imageInput.files[0]);
-
-    fetch("/image",{
-        method:"POST",
-        body: form
-    })
+    fetch("/image",{method:"POST",body:f})
     .then(r=>r.json())
     .then(d=>{
-        imgResult.textContent = JSON.stringify(d,null,2);
+        result.innerText = JSON.stringify(d,null,2);
+    });
+};
+
+// Recovery
+const recoverBtn = document.getElementById("recoverBtn");
+const recoverySteps = document.getElementById("recoverySteps");
+
+recoverBtn.onclick = ()=>{
+    fetch("/recovery",{method:"POST"})
+    .then(r=>r.json())
+    .then(d=>{
+        recoverySteps.innerHTML = "";
+        d.steps.forEach(s=>{
+            let li = document.createElement("li");
+            li.textContent = s;
+            recoverySteps.appendChild(li);
+        });
     });
 };

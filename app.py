@@ -18,7 +18,7 @@ MODEL_URL = (
 
 def call_gemini(prompt):
     payload = {
-        "contents": [{"parts": [{"text": prompt}]}]
+        "contents": [{"parts":[{"text":prompt}]}]
     }
 
     r = requests.post(MODEL_URL, json=payload).json()
@@ -44,12 +44,12 @@ def home():
 @app.route("/analyze", methods=["POST"])
 def analyze():
     data = request.json
-    text = data.get("text", "")
+    text = data.get("text","")
 
     prompt = f"""
-You are a cybersecurity assistant. Analyze this message for phishing/scam.
+You are a cybersecurity assistant.
 
-Return ONLY JSON like this:
+Analyze this message. Return ONLY JSON.
 
 {{
  "risk_level":"Low | Medium | High",
@@ -58,11 +58,16 @@ Return ONLY JSON like this:
  "risky_elements":[],
  "emergency_flag": true/false,
  "explanation":"short explanation",
- "suggested_action":"short next steps"
+ "suggested_action":"short next steps",
+ "prevention_steps":"ways to stay safe"
 }}
+
+Rules:
+- ONLY JSON
+- No markdown
+
 Message:
-\"\"\"{text}\"\"\"
-"""
+\"\"\"{text}\"\"\""""
 
     result = call_gemini(prompt)
 
@@ -74,27 +79,67 @@ Message:
             "risky_elements":[],
             "emergency_flag": False,
             "explanation":"Fallback safe result",
-            "suggested_action":"Stay alert"
+            "suggested_action":"Stay alert",
+            "prevention_steps":"Enable 2FA"
         }
 
     return jsonify(result)
 
 
-# ================= SCREENSHOT ANALYSIS =================
+# ================= SCREENSHOT OCR =================
 @app.route("/image", methods=["POST"])
-def image_scan():
+def image():
     img = request.files["image"]
     img_path = "temp.png"
     img.save(img_path)
 
     text = pytesseract.image_to_string(Image.open(img_path))
 
-    request.json = {
-        "text": text
-    }
-    return analyze()
+    fake_req = {"text": text}
+    return analyze_screenshot(fake_req)
+
+
+def analyze_screenshot(data):
+    text = data.get("text","")
+
+    prompt = f"""
+You are a cybersecurity assistant.
+
+Analyze this message/image extracted text. Return ONLY JSON:
+
+{{
+ "risk_level":"Low | Medium | High",
+ "attack_type":"type",
+ "platform_detected":"Instagram | YouTube | Gmail | WhatsApp | Unknown",
+ "risky_elements":[],
+ "emergency_flag": true/false,
+ "explanation":"short explanation",
+ "suggested_action":"short next steps",
+ "prevention_steps":"ways to stay safe"
+}}
+
+Content:
+{text}
+"""
+
+    result = call_gemini(prompt)
+    return jsonify(result)
+
+
+# ================= RECOVERY GUIDE =================
+@app.route("/recovery", methods=["POST"])
+def recovery():
+    return jsonify({
+        "steps":[
+            "Immediately change your account password",
+            "Enable Two Factor Authentication",
+            "Check login activity and remove unknown devices",
+            "Revoke suspicious third-party app permissions",
+            "Warn followers not to click recent suspicious links",
+            "File account recovery request with the platform"
+        ]
+    })
 
 
 if __name__ == "__main__":
     app.run(debug=True)
-
