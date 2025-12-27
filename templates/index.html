@@ -2,59 +2,29 @@
 <html>
 <head>
 <title>CreatorShield AI</title>
-<link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
 
-<h1 id="titleText">CreatorShield AI 🛡️</h1>
+<h1>CreatorShield AI</h1>
 
-<label>
-Language:
-<select id="language">
-<option value="english">English</option>
-<option value="hindi">Hindi</option>
-</select>
-</label>
-
-<br><br>
-
+<h2>Text Scam Detector</h2>
 <textarea id="messageInput" placeholder="Paste suspicious message..."></textarea>
-<br>
-<button id="analyzeBtn">Analyze Risk</button>
+<button id="analyzeBtn">Analyze</button>
 
-<div id="resultPanel" class="panel">
-  <h2 id="panelTitle">Threat Intelligence Panel</h2>
+<h3>Result</h3>
+<pre id="result"></pre>
 
-  <div id="gauge" class="gauge"></div>
-  <div id="riskBox" class="risk">Awaiting Analysis</div>
 
-  <p><b>Attack Type:</b> <span id="attack"></span></p>
-  <p><b>Platform:</b> <span id="platform"></span></p>
+<hr>
 
-  <p><b>Explanation:</b></p>
-  <p id="explanation"></p>
+<h2>Screenshot Scam Detector</h2>
+<input type="file" id="imageInput">
+<button id="analyzeImageBtn">Analyze Screenshot</button>
 
-  <p><b>Suggested Action:</b></p>
-  <p id="suggested_action"></p>
+<h3>Image Result</h3>
+<pre id="imgResult"></pre>
 
-  <p><b>Prevention:</b></p>
-  <p id="prevention"></p>
-
-  <p><b>Suspicious Indicators:</b></p>
-  <p id="flags"></p>
-
-  <div id="emergency" class="alert hidden">
-    ⚠️ WARNING: This is dangerous. Take action immediately.
-  </div>
-
-  <br>
-
-  <button id="copyBtn">Copy Report</button>
-  <button id="downloadBtn">Download Report</button>
-  <button id="waBtn">Share on WhatsApp</button>
-
-</div>
 
 <script src="/static/script.js"></script>
 </body>

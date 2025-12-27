@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, jsonify
 import os, requests, json, re
 from dotenv import load_dotenv
+from PIL import Image
+import pytesseract
 
 load_dotenv()
 
@@ -16,17 +18,23 @@ MODEL_URL = (
 
 def call_gemini(prompt):
     payload = {
-        "contents":[{"parts":[{"text":prompt}]}]
+        "contents": [{"parts": [{"text": prompt}]}]
     }
 
-    res = requests.post(MODEL_URL, json=payload).json()
+    r = requests.post(MODEL_URL, json=payload).json()
+
+    if "candidates" not in r:
+        return {}
+
+    txt = r["candidates"][0]["content"]["parts"][0]["text"]
 
     try:
-        text = res["candidates"][0]["content"]["parts"][0]["text"]
-        return text
+        return json.loads(txt)
     except:
-        return "{}"
-
+        m = re.search(r"\{[\s\S]*\}", txt)
+        if m:
+            return json.loads(m.group())
+        return {}
 
 @app.route("/")
 def home():
@@ -35,47 +43,28 @@ def home():
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
-    data = request.get_json()
-    message = data.get("text","")
+    data = request.json
+    text = data.get("text", "")
 
     prompt = f"""
-You are a cybersecurity expert.
+You are a cybersecurity assistant. Analyze this message for phishing/scam.
 
-Analyze the message and return STRICT JSON ONLY.
-NO MARKDOWN. NO TEXT.
-
-Return EXACTLY THIS STRUCTURE:
+Return ONLY JSON like this:
 
 {{
  "risk_level":"Low | Medium | High",
- "attack_type":"Phishing | Impersonation | Malware | Unknown",
+ "attack_type":"type",
  "platform_detected":"Instagram | YouTube | Gmail | WhatsApp | Unknown",
  "risky_elements":[],
  "emergency_flag": true/false,
- "explanation":"one paragraph",
- "suggested_action":"clear step user should take",
- "prevention_steps":"how to avoid in future"
+ "explanation":"short explanation",
+ "suggested_action":"short next steps"
 }}
-
 Message:
-\"\"\"{message}\"\"\"
+\"\"\"{text}\"\"\"
 """
 
-    response = call_gemini(prompt)
-
-    # try loading json safely
-    try:
-        result = json.loads(response)
-    except:
-        # fallback to regex json extraction if Gemini adds garbage
-        match = re.search(r"\{[\s\S]*\}", response)
-        if match:
-            try:
-                result = json.loads(match.group())
-            except:
-                result = {}
-        else:
-            result = {}
+    result = call_gemini(prompt)
 
     if not result:
         result = {
@@ -84,13 +73,28 @@ Message:
             "platform_detected":"Unknown",
             "risky_elements":[],
             "emergency_flag": False,
-            "explanation":"Fallback safe response. AI could not evaluate.",
-            "suggested_action":"Stay alert. Do not click unknown links.",
-            "prevention_steps":"Enable 2FA and verify before responding."
+            "explanation":"Fallback safe result",
+            "suggested_action":"Stay alert"
         }
 
     return jsonify(result)
 
 
+# ================= SCREENSHOT ANALYSIS =================
+@app.route("/image", methods=["POST"])
+def image_scan():
+    img = request.files["image"]
+    img_path = "temp.png"
+    img.save(img_path)
+
+    text = pytesseract.image_to_string(Image.open(img_path))
+
+    request.json = {
+        "text": text
+    }
+    return analyze()
+
+
 if __name__ == "__main__":
     app.run(debug=True)
+

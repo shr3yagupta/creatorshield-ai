@@ -1,83 +1,41 @@
-document.addEventListener("DOMContentLoaded", ()=>{
+const analyzeBtn = document.getElementById("analyzeBtn");
+const result = document.getElementById("result");
 
-let latestReport = "";
-let selectedLanguage = "english";
+// ========== TEXT ANALYSIS ==========
+analyzeBtn.onclick = () => {
+    result.textContent = "Analyzing...";
 
-document.getElementById("language").onchange = (e)=>{
-  selectedLanguage = e.target.value;
-
-  if(selectedLanguage==="hindi"){
-    document.getElementById("titleText").innerText="क्रिएटरशील्ड AI 🛡️";
-    document.getElementById("panelTitle").innerText="थ्रेट इंटेलिजेंस पैनल";
-  } else {
-    document.getElementById("titleText").innerText="CreatorShield AI 🛡️";
-    document.getElementById("panelTitle").innerText="Threat Intelligence Panel";
-  }
-};
-
-document.getElementById("analyzeBtn").onclick = ()=>{
-  
-  const msg = messageInput.value.trim();
-  if(msg===""){ alert("Enter message"); return; }
-
-  resultPanel.style.display="block";
-  explanation.innerText="Analyzing…";
-
-  fetch("/analyze",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      text:msg,
-      language:selectedLanguage
+    fetch("/analyze",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+            text: messageInput.value
+        })
     })
-  })
-  .then(r=>r.json())
-  .then(showResult);
+    .then(r=>r.json())
+    .then(d=>{
+        result.textContent = JSON.stringify(d,null,2);
+    });
 };
 
-function showResult(d){
 
-  riskBox.innerText = "Risk: "+d.risk_level;
-  riskBox.className="risk";
+// ========== IMAGE ANALYSIS ==========
+const imageBtn = document.getElementById("analyzeImageBtn");
+const imgResult = document.getElementById("imgResult");
 
-  gauge.className="gauge";
+imageBtn.onclick = () => {
 
-  if(d.risk_level==="High"){riskBox.classList.add("high");gauge.classList.add("high")}
-  else if(d.risk_level==="Medium"){riskBox.classList.add("medium");gauge.classList.add("medium")}
-  else{riskBox.classList.add("low");gauge.classList.add("low")}
+    imgResult.textContent = "Analyzing Screenshot...";
 
-  attack.innerText = d.attack_type;
-  platform.innerText = d.platform_detected;
-  explanation.innerText = d.explanation;
-  suggested_action.innerText = d.suggested_action;
-  prevention.innerText = d.prevention_steps;
-  flags.innerText = d.risky_elements;
+    let form = new FormData();
+    form.append("image", imageInput.files[0]);
 
-  if(d.emergency_flag)
-    emergency.classList.remove("hidden");
-
-  latestReport = JSON.stringify(d,null,2);
-}
-
-
-// COPY
-copyBtn.onclick=()=>{
-  navigator.clipboard.writeText(latestReport);
-  alert("Copied!");
-}
-
-// DOWNLOAD
-downloadBtn.onclick=()=>{
-  let a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob([latestReport]));
-  a.download="CreatorShield_Report.txt";
-  a.click();
-}
-
-// WHATSAPP
-waBtn.onclick=()=>{
-  window.open("https://api.whatsapp.com/send?text="+encodeURIComponent(latestReport));
-}
-
-});
-
+    fetch("/image",{
+        method:"POST",
+        body: form
+    })
+    .then(r=>r.json())
+    .then(d=>{
+        imgResult.textContent = JSON.stringify(d,null,2);
+    });
+};
