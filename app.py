@@ -17,23 +17,29 @@ MODEL_URL = (
     f"?key={GEMINI_API_KEY}"
 )
 
+
 def call_gemini(prompt):
     payload = {"contents": [{"parts":[{"text":prompt}]}] }
     r = requests.post(MODEL_URL, json=payload).json()
+
     if "candidates" not in r:
         return {}
+
     txt = r["candidates"][0]["content"]["parts"][0]["text"]
+
     try:
         return json.loads(txt)
     except:
         m = re.search(r"\{[\s\S]*\}", txt)
         if m:
             return json.loads(m.group())
+
     return {}
 
 @app.route("/")
 def home():
     return render_template("index.html")
+
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
@@ -63,8 +69,7 @@ Return ONLY JSON.
 Rules:
 - ONLY JSON
 - No markdown
-- No extra text
-- Hindi if Hindi mode: ONLY Hindi
+- Hindi only if Hindi selected
 {lang_rule}
 
 Message:
@@ -86,6 +91,8 @@ Message:
 
     return jsonify(result)
 
+
+
 @app.route("/image",methods=["POST"])
 def image():
     img = request.files["image"]
@@ -94,11 +101,14 @@ def image():
     text = pytesseract.image_to_string(Image.open(img_path))
     return analyze_text(text)
 
+
 def analyze_text(txt):
     fake_request={"json":lambda:{"text":txt,"language":"english"}}
     with app.test_request_context():
         request.json=fake_request["json"]()
         return analyze()
+
+
 
 @app.route("/voice", methods=["POST"])
 def voice():
@@ -128,6 +138,8 @@ def voice():
     except Exception as e:
         return jsonify({"error": str(e)})
 
+
+
 @app.route("/recovery",methods=["POST"])
 def recovery():
     return jsonify({"steps":[
@@ -138,20 +150,85 @@ def recovery():
         "Report suspicious account"
     ]})
 
+
+
 @app.route("/trending",methods=["POST"])
 def trending():
     return jsonify({"scams": "Instagram verification scam, YouTube brand impersonation, WhatsApp prize scam" })
 
+
+
+@app.route("/global-trends", methods=["POST"])
+def global_trends():
+    prompt = """
+You are a cybersecurity intelligence system.
+Return ONLY JSON.
+
+Give top 5 currently active scam threats worldwide targeting:
+- Creators
+- Influencers
+- YouTube / Instagram
+- Small creators
+- General internet users
+
+Return format ONLY:
+
+{
+ "trends":[
+  {
+   "title":"short scam name",
+   "platform":"Instagram | YouTube | WhatsApp | Email | Global",
+   "risk":"Low | Medium | High",
+   "region":"Global | India | Asia | US",
+   "description":"short explanation"
+  }
+ ]
+}
+
+Rules:
+- ONLY JSON
+- No markdown
+- No extra commentary
+"""
+
+    payload = {"contents":[{"parts":[{"text":prompt}]}]}
+    r = requests.post(MODEL_URL, json=payload).json()
+
+    if "candidates" not in r:
+        return jsonify({"trends":[]})
+
+    txt = r["candidates"][0]["content"]["parts"][0]["text"]
+
+    try:
+        return jsonify(json.loads(txt))
+    except:
+        m = re.search(r"\{[\s\S]*\}", txt)
+        if m:
+            return jsonify(json.loads(m.group()))
+
+    return jsonify({"trends":[]})
+
+
+
 @app.route("/chat", methods=["POST"])
 def chat():
     user = request.json.get("message","")
-    prompt=f"You are a supportive cybersecurity helper. Reply friendly & short.\nUser: {user}"
-    r = requests.post(MODEL_URL, json={"contents":[{"parts":[{"text":prompt}]}]} ).json()
+
+    prompt=f"You are a helpful cybersecurity assistant. Reply short, friendly.\nUser: {user}"
+
+    r = requests.post(
+        MODEL_URL,
+        json={"contents":[{"parts":[{"text":prompt}]}]}
+    ).json()
+
     if "candidates" in r:
         reply=r["candidates"][0]["content"]["parts"][0]["text"]
     else:
         reply="I'm here! Tell me what happened — I'll help 😊"
+
     return jsonify({"reply":reply})
+
+
 
 if __name__=="__main__":
     app.run(debug=True)
