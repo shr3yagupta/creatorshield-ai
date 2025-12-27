@@ -44,3 +44,16 @@ recoverBtn.onclick = ()=>{
         });
     });
 };
+
+function scanLink(){
+ fetch("/link",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({url:document.getElementById("urlInput").value})
+ })
+ .then(r=>r.json())
+ .then(d=>{
+   document.getElementById("urlResult").innerText =
+    `Risk: ${d.risk_level} | ${d.explanation}`;
+ });
+}

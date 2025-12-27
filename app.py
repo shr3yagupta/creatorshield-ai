@@ -140,6 +140,28 @@ def recovery():
         ]
     })
 
+@app.route("/link", methods=["POST"])
+def link_scan():
+    data = request.json
+    url = data.get("url","").lower()
+
+    risky_keywords = [
+        "verify", "verification", "free", "gift",
+        "instagram-support", "youtube-partner",
+        "claim", "bonus", "payment", "login"
+    ]
+
+    suspicious = any(word in url for word in risky_keywords)
+
+    result = {
+        "url": url,
+        "risk_level": "High" if suspicious else "Low",
+        "explanation": "Suspicious scam pattern detected" if suspicious else "No strong scam pattern detected",
+        "suggested_action": "Do NOT click if sent by unknown person" if suspicious else "Looks safe but stay alert"
+    }
+
+    return jsonify(result)
+
 
 if __name__ == "__main__":
     app.run(debug=True)
