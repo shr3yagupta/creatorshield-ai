@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify
-import os, requests, json
+import os, requests, json, re
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,9 +16,7 @@ MODEL_URL = (
 
 def call_gemini(prompt):
     payload = {
-        "contents":[
-            {"parts":[{"text":prompt}]}
-        ]
+        "contents":[{"parts":[{"text":prompt}]}]
     }
 
     res = requests.post(MODEL_URL, json=payload).json()
@@ -27,7 +25,7 @@ def call_gemini(prompt):
         text = res["candidates"][0]["content"]["parts"][0]["text"]
         return text
     except:
-        return "AI failed to analyze."
+        return "{}"
 
 
 @app.route("/")
@@ -38,24 +36,60 @@ def home():
 @app.route("/analyze", methods=["POST"])
 def analyze():
     data = request.get_json()
-    message = data.get("text", "")
+    message = data.get("text","")
 
     prompt = f"""
-You are a cybersecurity expert. Analyze this message for scam risk.
-Explain clearly and simply.
+You are a cybersecurity expert.
+
+Analyze the message and return STRICT JSON ONLY.
+NO MARKDOWN. NO TEXT.
+
+Return EXACTLY THIS STRUCTURE:
+
+{{
+ "risk_level":"Low | Medium | High",
+ "attack_type":"Phishing | Impersonation | Malware | Unknown",
+ "platform_detected":"Instagram | YouTube | Gmail | WhatsApp | Unknown",
+ "risky_elements":[],
+ "emergency_flag": true/false,
+ "explanation":"one paragraph",
+ "suggested_action":"clear step user should take",
+ "prevention_steps":"how to avoid in future"
+}}
 
 Message:
-{message}
-
-Return response like:
-Risk Level: High/Medium/Low
-Reason:
-What should user do next:
+\"\"\"{message}\"\"\"
 """
 
-    ai_response = call_gemini(prompt)
+    response = call_gemini(prompt)
 
-    return jsonify({"ai": ai_response})
+    # try loading json safely
+    try:
+        result = json.loads(response)
+    except:
+        # fallback to regex json extraction if Gemini adds garbage
+        match = re.search(r"\{[\s\S]*\}", response)
+        if match:
+            try:
+                result = json.loads(match.group())
+            except:
+                result = {}
+        else:
+            result = {}
+
+    if not result:
+        result = {
+            "risk_level":"Low",
+            "attack_type":"Unknown",
+            "platform_detected":"Unknown",
+            "risky_elements":[],
+            "emergency_flag": False,
+            "explanation":"Fallback safe response. AI could not evaluate.",
+            "suggested_action":"Stay alert. Do not click unknown links.",
+            "prevention_steps":"Enable 2FA and verify before responding."
+        }
+
+    return jsonify(result)
 
 
 if __name__ == "__main__":
