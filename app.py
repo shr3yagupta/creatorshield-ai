@@ -3,9 +3,10 @@ import os, requests, json, re
 from dotenv import load_dotenv
 from PIL import Image
 import pytesseract
+from werkzeug.utils import secure_filename
+import speech_recognition as sr
 
 load_dotenv()
-
 app = Flask(__name__)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -17,39 +18,36 @@ MODEL_URL = (
 )
 
 def call_gemini(prompt):
-    payload = {
-        "contents": [{"parts":[{"text":prompt}]}]
-    }
-
+    payload = {"contents": [{"parts":[{"text":prompt}]}] }
     r = requests.post(MODEL_URL, json=payload).json()
-
     if "candidates" not in r:
         return {}
-
     txt = r["candidates"][0]["content"]["parts"][0]["text"]
-
     try:
         return json.loads(txt)
     except:
         m = re.search(r"\{[\s\S]*\}", txt)
         if m:
             return json.loads(m.group())
-        return {}
+    return {}
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
-
 @app.route("/analyze", methods=["POST"])
 def analyze():
     data = request.json
     text = data.get("text","")
+    lang = data.get("language","english")
+
+    lang_rule = "Respond completely in English."
+    if lang=="hindi":
+        lang_rule="पूरी प्रतिक्रिया हिंदी में दो। किसी भी भाग में अंग्रेज़ी का प्रयोग न करो।"
 
     prompt = f"""
-You are a cybersecurity assistant.
-
-Analyze this message. Return ONLY JSON.
+You are a cybersecurity assistant. Analyze this message.
+Return ONLY JSON.
 
 {{
  "risk_level":"Low | Medium | High",
@@ -65,10 +63,13 @@ Analyze this message. Return ONLY JSON.
 Rules:
 - ONLY JSON
 - No markdown
+- No extra text
+- Hindi if Hindi mode: ONLY Hindi
+{lang_rule}
 
 Message:
-\"\"\"{text}\"\"\""""
-
+\"\"\"{text}\"\"\"
+"""
     result = call_gemini(prompt)
 
     if not result:
@@ -85,83 +86,72 @@ Message:
 
     return jsonify(result)
 
-
-# ================= SCREENSHOT OCR =================
-@app.route("/image", methods=["POST"])
+@app.route("/image",methods=["POST"])
 def image():
     img = request.files["image"]
-    img_path = "temp.png"
+    img_path="temp.png"
     img.save(img_path)
-
     text = pytesseract.image_to_string(Image.open(img_path))
+    return analyze_text(text)
 
-    fake_req = {"text": text}
-    return analyze_screenshot(fake_req)
+def analyze_text(txt):
+    fake_request={"json":lambda:{"text":txt,"language":"english"}}
+    with app.test_request_context():
+        request.json=fake_request["json"]()
+        return analyze()
 
+@app.route("/voice", methods=["POST"])
+def voice():
+    try:
+        file = request.files["audio"]
+        filename = secure_filename("voice_temp.wav")
+        file.save(filename)
 
-def analyze_screenshot(data):
-    text = data.get("text","")
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(filename) as source:
+            audio_text = recognizer.record(source)
 
-    prompt = f"""
-You are a cybersecurity assistant.
+        try:
+            text = recognizer.recognize_google(audio_text)
+        except:
+            return jsonify({"error":"Could not understand the audio clearly"})
 
-Analyze this message/image extracted text. Return ONLY JSON:
+        fake_request = {
+            "text": text,
+            "language": "english"
+        }
 
-{{
- "risk_level":"Low | Medium | High",
- "attack_type":"type",
- "platform_detected":"Instagram | YouTube | Gmail | WhatsApp | Unknown",
- "risky_elements":[],
- "emergency_flag": true/false,
- "explanation":"short explanation",
- "suggested_action":"short next steps",
- "prevention_steps":"ways to stay safe"
-}}
+        with app.test_request_context():
+            request.json = fake_request
+            return analyze()
 
-Content:
-{text}
-"""
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
-    result = call_gemini(prompt)
-    return jsonify(result)
-
-
-# ================= RECOVERY GUIDE =================
-@app.route("/recovery", methods=["POST"])
+@app.route("/recovery",methods=["POST"])
 def recovery():
-    return jsonify({
-        "steps":[
-            "Immediately change your account password",
-            "Enable Two Factor Authentication",
-            "Check login activity and remove unknown devices",
-            "Revoke suspicious third-party app permissions",
-            "Warn followers not to click recent suspicious links",
-            "File account recovery request with the platform"
-        ]
-    })
+    return jsonify({"steps":[
+        "Change password immediately",
+        "Enable 2FA",
+        "Check login activity",
+        "Remove unknown devices",
+        "Report suspicious account"
+    ]})
 
-@app.route("/link", methods=["POST"])
-def link_scan():
-    data = request.json
-    url = data.get("url","").lower()
+@app.route("/trending",methods=["POST"])
+def trending():
+    return jsonify({"scams": "Instagram verification scam, YouTube brand impersonation, WhatsApp prize scam" })
 
-    risky_keywords = [
-        "verify", "verification", "free", "gift",
-        "instagram-support", "youtube-partner",
-        "claim", "bonus", "payment", "login"
-    ]
+@app.route("/chat", methods=["POST"])
+def chat():
+    user = request.json.get("message","")
+    prompt=f"You are a supportive cybersecurity helper. Reply friendly & short.\nUser: {user}"
+    r = requests.post(MODEL_URL, json={"contents":[{"parts":[{"text":prompt}]}]} ).json()
+    if "candidates" in r:
+        reply=r["candidates"][0]["content"]["parts"][0]["text"]
+    else:
+        reply="I'm here! Tell me what happened — I'll help 😊"
+    return jsonify({"reply":reply})
 
-    suspicious = any(word in url for word in risky_keywords)
-
-    result = {
-        "url": url,
-        "risk_level": "High" if suspicious else "Low",
-        "explanation": "Suspicious scam pattern detected" if suspicious else "No strong scam pattern detected",
-        "suggested_action": "Do NOT click if sent by unknown person" if suspicious else "Looks safe but stay alert"
-    }
-
-    return jsonify(result)
-
-
-if __name__ == "__main__":
+if __name__=="__main__":
     app.run(debug=True)

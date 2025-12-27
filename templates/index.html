@@ -1,43 +1,160 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>CreatorShield AI</title>
-<link rel="stylesheet" href="/static/style.css">
+  <title>CreatorShield AI</title>
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
 
-<h1>CreatorShield AI</h1>
+<header class="nav">
+  <div class="logo">🛡️ CreatorShield AI</div>
 
-<h3>Paste Suspicious Message</h3>
-<textarea id="messageInput" placeholder="Paste message..."></textarea>
-<button id="analyzeBtn">Analyze</button>
+  <div class="nav-right">
+    <button onclick="openPremium()" id="premiumBtn">CreatorShield Premium</button>
+    <span id="langLabel">Language:</span>
+    <select id="language">
+      <option value="english">English</option>
+      <option value="hindi">Hindi</option>
+    </select>
+  </div>
+</header>
 
-<h3>Upload Screenshot</h3>
-<input type="file" id="imageInput">
-<button id="imageBtn">Analyze Screenshot</button>
 
-<h2>Result</h2>
-<pre id="result"></pre>
+<section class="hero">
 
-<hr>
-<div class="card">
-  <h3>🔗 Scam Link Scanner</h3>
-  <input id="urlInput" class="inputBox" placeholder="Paste suspicious link here">
-  <button onclick="scanLink()">Scan Link</button>
-  <p id="urlResult"></p>
+  <div class="hero-left">
+    <h1 id="headline">Detect scams before they detect you.</h1>
+    <p class="sub" id="subtitle">
+      AI security assistant for creators — Paste messages, upload screenshots, or submit voice calls.
+    </p>
+
+    <div class="tabs">
+      <button id="textTab" class="tab active">📩 Text</button>
+      <button id="imgTab" class="tab">🖼️ Screenshot</button>
+      <button id="voiceTab" class="tab">🎤 Voice</button>
+    </div>
+
+    <div id="textMode" class="mode show">
+      <textarea id="messageInput" class="inputBox" placeholder="Paste suspicious message..."></textarea>
+    </div>
+
+    <div id="imageMode" class="mode">
+      <label class="uploadZone">
+        <input type="file" id="imageInput" hidden>
+        <p>📎 Drop Screenshot or Click to Upload</p>
+      </label>
+    </div>
+
+    <div id="voiceMode" class="mode">
+      <label class="uploadZone">
+        <input type="file" id="voiceInput" accept="audio/*" hidden>
+        <p>🎤 Upload Voice Recording (Scam Call / Audio)</p>
+      </label>
+    </div>
+
+    <button id="analyzeBtn" class="scanBtn">Analyze Risk</button>
+  </div>
+
+
+  <div class="hero-right glass">
+    <h2 id="panelTitle">Threat Intelligence Panel</h2>
+
+    <div id="gauge" class="gauge"></div>
+    <div id="riskBox" class="risk">Awaiting Analysis</div>
+
+    <div class="resultBox">
+      <p><strong>Attack:</strong> <span id="attack"></span></p>
+      <p><strong>Platform:</strong> <span id="platform"></span></p>
+
+      <p><strong>Explanation:</strong></p>
+      <p id="explanation"></p>
+
+      <p><strong>Suggested Action:</strong></p>
+      <p id="suggested_action"></p>
+
+      <p><strong>Prevention Steps:</strong></p>
+      <p id="prevention"></p>
+
+      <p><strong>Suspicious Indicators:</strong></p>
+      <p id="flags"></p>
+    </div>
+
+    <div class="btnRow">
+      <button id="copyBtn">Copy Report</button>
+      <button id="downloadBtn">Download</button>
+      <button id="waBtn" class="whatsapp">Share on WhatsApp</button>
+    </div>
+
+    <div id="emergencyNotice" class="alert hidden">
+      ⚠️ Already clicked or replied? Take action NOW.
+    </div>
+
+  </div>
+</section>
+
+
+
+<section class="toolkit">
+  <h2>Creator Security Toolkit</h2>
+
+  <div class="grid">
+
+    <div class="card">
+      <h3>🆘 Emergency Recovery Guide</h3>
+      <button id="recoverBtn">Show Recovery Steps</button>
+      <ul id="recoverySteps"></ul>
+
+      <p><strong>Official Help</strong></p>
+      <a href="https://support.google.com/accounts/troubleshooter/2402620" target="_blank">Google</a><br>
+      <a href="https://help.instagram.com/368191326593075" target="_blank">Instagram</a><br>
+      <a href="https://support.google.com/youtube/answer/76187" target="_blank">YouTube</a><br>
+      <a href="https://www.linkedin.com/help/linkedin/answer/a521567" target="_blank">LinkedIn</a>
+    </div>
+
+  </div>
+</section>
+
+
+
+<section class="trend glass">
+  <h2>Trending Creator Scams</h2>
+  <button id="trendBtn">Show Latest Threats</button>
+  <div id="trendingList"></div>
+</section>
+
+
+
+<div id="premiumPopup" class="popup hidden">
+  <div class="popupBox">
+    <h2 id="premiumTitle">CreatorShield Premium 🚀</h2>
+    <p id="premiumDesc">
+      Browser Extension • Real-time Scam Warnings • QR Scanner • Auto-Report Filing
+    </p>
+    <p><strong id="comingSoon">Coming Soon 🔥</strong></p>
+    <button id="closePremiumBtn" class="closeBtn">Close</button>
+  </div>
 </div>
 
-<h2>🆘 Emergency Recovery Guide</h2>
-<button id="recoverBtn">Show Recovery Steps</button>
-<ul id="recoverySteps"></ul>
 
-<h4>Official Help</h4>
-<a href="https://support.google.com/accounts/troubleshooter/2402620" target="_blank">Google</a><br>
-<a href="https://help.instagram.com/368191326593075" target="_blank">Instagram</a><br>
-<a href="https://support.google.com/youtube/answer/76187" target="_blank">YouTube</a><br>
-<a href="https://www.linkedin.com/help/linkedin/answer/a521567" target="_blank">LinkedIn</a>
+
+<div id="chatbot" class="chatCollapsed">💬</div>
+
+<div id="chatWindow" class="chatWindow hidden">
+  <h3>CreatorShield Assistant</h3>
+
+  <div id="chatMessages" class="chatMessages">
+    <p><strong>🤖 Hello!</strong><br>I’m here to help you stay safe. Tell me what happened…</p>
+  </div>
+
+  <textarea id="chatInput"></textarea>
+  <button id="sendChat">Send</button>
+  <button id="closeChat">Close</button>
+</div>
+
+
 
 <script src="/static/script.js"></script>
+
 </body>
 </html>
